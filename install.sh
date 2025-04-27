@@ -1,100 +1,113 @@
 #!/bin/bash
 
 # Установочный скрипт Fedora Auto-Setup
-# Безопасная версия (без паролей в коде)
+# Версия 3.0 (стабильная)
 
 # Цвета для вывода
 RED='\033[0;31m'
 GREEN='\033[0;32m'
-NC='\033[0m' # No Color
+YELLOW='\033[1;33m'
+NC='\033[0m'
 
-# Функции для вывода
+# Функции вывода
 error() { echo -e "${RED}[ОШИБКА]${NC} $1" >&2; exit 1; }
+warning() { echo -e "${YELLOW}[ПРЕДУПРЕЖДЕНИЕ]${NC} $1"; }
 success() { echo -e "${GREEN}[УСПЕХ]${NC} $1"; }
 
-check_dependencies() {
-    local deps=("curl" "gpg" "jq")
+# Проверка root-прав
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        error "Этот скрипт должен запускаться с root-правами. Используйте sudo."
+    fi
+}
+
+# Установка зависимостей
+install_deps() {
+    local deps=("curl" "gpg" "jq" "libnotify" "systemd")
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &>/dev/null; then
-            echo "Устанавливаем $dep..."
-            sudo dnf install -y "$dep" || error "Не удалось установить $dep"
+            warning "Устанавливаем $dep..."
+            dnf install -y "$dep" || error "Не удалось установить $dep"
         fi
     done
 }
 
-decrypt_config() {
-    # Запрашиваем пароль только если файл существует
-    if [[ -f "fedora-setup.conf.gpg" ]]; then
-        read -rsp "Введите пароль для расшифровки: " password
-        echo
-        if ! gpg -d --batch --passphrase "$password" fedora-setup.conf.gpg > fedora-setup.conf; then
-            error "Неверный пароль или повреждённый файл"
-        fi
-        return 0
-    fi
-    return 1
-}
-
-main_install() {
-    echo "=== Установка Fedora Auto-Setup ==="
+# Загрузка и расшифровка конфига
+setup_config() {
+    local config_url="https://raw.githubusercontent.com/GoldenStiv-Fedora/fedora-setup/main/fedora-setup.conf.gpg"
     
-    # 1. Скачиваем зашифрованный конфиг
-    echo "Загружаем конфигурацию..."
-    if ! curl -sO "https://raw.githubusercontent.com/GoldenStiv-Fedora/fedora-setup/main/fedora-setup.conf.gpg"; then
-        error "Не удалось загрузить конфиг"
+    echo -n "Загружаем конфиг... "
+    if ! curl -sLO "$config_url"; then
+        error "Ошибка загрузки конфига"
     fi
-
-    # 2. Интерактивная расшифровка
-    if ! decrypt_config; then
-        error "Не удалось расшифровать конфиг"
+    
+    read -rsp "Введите пароль для расшифровки: " password
+    echo
+    if ! gpg -d --batch --passphrase "$password" fedora-setup.conf.gpg > fedora-setup.conf 2>/dev/null; then
+        error "Неверный пароль или повреждённый файл"
     fi
-
-    # 3. Установка конфига
-    sudo mkdir -p /etc
-    sudo mv fedora-setup.conf /etc/
-    sudo chmod 600 /etc/fedora-setup.conf
+    
+    mkdir -p /etc
+    mv fedora-setup.conf /etc/
+    chmod 600 /etc/fedora-setup.conf
     rm -f fedora-setup.conf.gpg
+    success "Конфиг установлен"
+}
 
-    # 4. Установка скриптов
-    declare -a scripts=("00_fetch_logs.sh" "01_analyze_and_prepare.sh" "02_full_auto_setup.sh")
+# Установка основных скриптов
+install_scripts() {
+    local scripts=("00_fetch_logs.sh" "01_analyze_and_prepare.sh" "02_full_auto_setup.sh")
+    local repo_url="https://raw.githubusercontent.com/GoldenStiv-Fedora/fedora-setup/main"
+    
+    mkdir -p /usr/local/bin
     for script in "${scripts[@]}"; do
-        echo "Устанавливаем $script..."
-        sudo curl -o "/usr/local/bin/$script" \
-            "https://raw.githubusercontent.com/GoldenStiv-Fedora/fedora-setup/main/$script" || \
-            error "Не удалось загрузить $script"
-        sudo chmod +x "/usr/local/bin/$script"
+        echo -n "Устанавливаем $script... "
+        if curl -sLo "/usr/local/bin/$script" "$repo_url/$script"; then
+            chmod +x "/usr/local/bin/$script"
+            success "OK"
+        else
+            error "Ошибка загрузки"
+        fi
     done
+}
 
-    # 5. Настройка службы
-    echo "Настраиваем службу..."
-    sudo tee /etc/systemd/system/fedora-auto-setup.service >/dev/null <<EOF
+# Настройка systemd службы
+setup_service() {
+    cat > /etc/systemd/system/fedora-auto-setup.service <<'EOF'
 [Unit]
 Description=Fedora Auto-Setup Service
 After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
 
 [Service]
 Type=simple
-ExecStart=/usr/local/bin/02_full_auto_setup.sh
+ExecStart=/usr/local/bin/02_full_auto_setup.sh --daemon
 Restart=on-failure
+RestartSec=30s
 EnvironmentFile=/etc/fedora-setup.conf
+TimeoutStartSec=300
+TimeoutStopSec=30
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-    sudo systemctl daemon-reload
-    sudo systemctl enable --now fedora-auto-setup.service
-
-    success "Установка завершена!"
-    echo -e "\nДля немедленной настройки выполните:"
-    echo "sudo /usr/local/bin/02_full_auto_setup.sh"
+    systemctl daemon-reload
+    systemctl enable --now fedora-auto-setup.service
 }
 
-# Главный процесс
-check_dependencies
-main_install
+# Главная функция
+main() {
+    check_root
+    install_deps
+    setup_config
+    install_scripts
+    setup_service
+    
+    success "Установка завершена!"
+    echo "Служба успешно запущена. Проверить статус:"
+    echo "  systemctl status fedora-auto-setup.service"
+}
 
-# Уведомление (если доступно)
-if command -v notify-send &>/dev/null; then
-    notify-send "Fedora Auto-Setup" "Установка завершена успешно!"
-fi
+main
