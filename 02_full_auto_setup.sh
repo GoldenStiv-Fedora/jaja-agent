@@ -1,64 +1,80 @@
 #!/bin/bash
 
 ####################################################################
-# 02_full_auto_setup.sh — ПОЛНАЯ АВТОМАТИЧЕСКАЯ НАСТРОЙКА FEDORA    #
+# 02_full_auto_setup.sh — АВТОМАТИЧЕСКАЯ НАСТРОЙКА FEDORA           #
+# Логи: https://github.com/GoldenStiv-Fedora/fedora-setup/logs      #
 ####################################################################
 
-GITHUB_REPO="https://raw.githubusercontent.com/GoldenStiv-Fedora/fedora-setup/main"
+# Загрузка конфигурации
+CONFIG_FILE="/etc/fedora-setup.conf"
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo "❌ Ошибка: файл конфигурации $CONFIG_FILE не найден!" | tee -a /tmp/system_setup.log
+    notify-send --urgency=critical "Ошибка" "Отсутствует конфигурационный файл!"
+    exit 1
+fi
+source "$CONFIG_FILE"
 
-# 🔄 Функция скачивания зависимых скриптов
-function fetch_dependency() {
-    local script_name="$1"
-    curl -s -o "/tmp/$script_name" "$GITHUB_REPO/$script_name"
-    chmod +x "/tmp/$script_name"
-    echo "📥 Зависимость $script_name загружена."
+GITHUB_RAW="https://raw.githubusercontent.com/$GITHUB_USER/$GITHUB_REPO/main"
+GITHUB_API="https://api.github.com/repos/$GITHUB_USER/$GITHUB_REPO/contents"
+SCRIPT_LOG="/tmp/system_setup.log"
+TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+
+# Уведомление о начале
+notify-send --urgency=critical "🚀 Fedora Setup" "Начало автоматической настройки системы!"
+
+# Проверка обновлений скрипта
+check_updates() {
+    local script_name=$(basename "$0")
+    local remote_sha=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+        "$GITHUB_API/$script_name" | jq -r '.sha')
+    local local_sha=$(sha256sum "$0" | awk '{print $1}')
+
+    if [[ "$remote_sha" != "$local_sha" ]]; then
+        curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "$GITHUB_API/$script_name" | jq -r '.content' | base64 -d > "$0"
+        chmod +x "$0"
+        notify-send --urgency=critical "🔁 Скрипт обновлён" "Перезапустите скрипт вручную."
+        exit 0
+    fi
 }
 
-# 📥 Загружаем и запускаем скрипт сбора логов
-fetch_dependency "00_fetch_logs.sh"
-/tmp/00_fetch_logs.sh
+# Очистка старых логов (старше 3 недель)
+clean_old_logs() {
+    local logs=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+        "$GITHUB_API/logs" | jq -r '.[] | select(.type == "file") | .name')
 
-# 📥 Загружаем и запускаем анализатор
-fetch_dependency "01_analyze_and_prepare.sh"
-/tmp/01_analyze_and_prepare.sh
+    for log in $logs; do
+        log_date=$(echo "$log" | grep -oE "[0-9]{4}-[0-9]{2}-[0-9]{2}")
+        if [[ $(date -d "$log_date" +%s) -lt $(date -d "3 weeks ago" +%s) ]]; then
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+                "$GITHUB_API/logs/$log"
+            echo "🗑️ Удалён старый лог: $log"
+        fi
+    done
+}
 
-# 🔎 Подгружаем результаты анализа
-source /tmp/system_config_detected.conf
+# Основной процесс
+{
+    check_updates
+    clean_old_logs
 
-echo "🛠️ Начинаем настройку системы на основе анализированной конфигурации..."
-notify-send "Настройка начата" "Скрипт переходит к настройке Fedora!"
+    # Загрузка и запуск зависимостей
+    curl -s -o "/tmp/00_fetch_logs.sh" "$GITHUB_RAW/00_fetch_logs.sh"
+    chmod +x "/tmp/00_fetch_logs.sh"
+    /tmp/00_fetch_logs.sh
 
-# 📦 Установка базовых пакетов
-dnf install -y powertop tuned thermald lm_sensors irqbalance nvme-cli smartmontools audit fprintd pipewire pipewire-alsa pipewire-pulseaudio wireplumber cronie libnotify
+    curl -s -o "/tmp/01_analyze_and_prepare.sh" "$GITHUB_RAW/01_analyze_and_prepare.sh"
+    chmod +x "/tmp/01_analyze_and_prepare.sh"
+    /tmp/01_analyze_and_prepare.sh
 
-# 🔥 Оптимизация энергопотребления
-systemctl enable --now thermald.service irqbalance.service tuned.service
-tuned-adm profile powersave
+    # Применение настроек
+    source /tmp/system_config_detected.conf
+    dnf install -y powertop tuned thermald lm_sensors irqbalance nvme-cli
+    tuned-adm profile powersave
+    systemctl enable --now thermald irqbalance tuned
+} 2>&1 | tee -a "$SCRIPT_LOG"
 
-# 🔋 Автоматическое переключение профиля питания
-cat <<'EOF' > /etc/udev/rules.d/99-powerplug.rules
-SUBSYSTEM=="power_supply", ATTR{status}=="Discharging", RUN+="/usr/sbin/tuned-adm profile powersave"
-SUBSYSTEM=="power_supply", ATTR{status}=="Charging", RUN+="/usr/sbin/tuned-adm profile balanced"
-EOF
-udevadm control --reload
-udevadm trigger
-
-# 🎵 Перезапуск PipeWire от имени пользователя
-sudo -u $SUDO_USER systemctl --user restart pipewire{,-pulse}.service wireplumber.service
-
-# 🛡️ Автоматические обновления
-systemctl enable --now dnf-automatic.timer
-
-# 📈 Настройка TCP-сетей
-cat <<EOF > /etc/sysctl.d/99-network-tuning.conf
-net.core.rmem_max=16777216
-net.core.wmem_max=16777216
-net.ipv4.tcp_rmem=4096 87380 16777216
-net.ipv4.tcp_wmem=4096 65536 16777216
-net.ipv4.tcp_congestion_control=bbr
-EOF
-sysctl --system
-
-echo "✅ Fedora настроена! Перезагрузите систему для активации всех настроек."
-notify-send "Настройка Fedora завершена" "Пожалуйста, перезагрузите ноутбук."
-
+# Итоговое уведомление
+notify-send --urgency=critical "🎉 Настройка завершена!" \
+"Система оптимизирована:\n• CPU: $CPU_VENDOR\n• GPU: $GPU_VENDOR\n• NVMe: $HAS_NVME\n\nЛоги: https://github.com/$GITHUB_USER/$GITHUB_REPO/logs"
+echo "[$(date)] Настройка системы завершена." >> "$SCRIPT_LOG"
