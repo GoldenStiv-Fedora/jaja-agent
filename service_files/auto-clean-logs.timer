@@ -1,0 +1,9 @@
+[Unit]
+Description=Daily Auto Clean Old Logs Timer
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
