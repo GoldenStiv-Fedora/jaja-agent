@@ -1,11 +1,7 @@
 #!/bin/bash
-# 00_fetch_logs.sh — Сбор и отправка логов на GitHub
 
 CONFIG_FILE="/etc/fedora-setup.conf"
-if [[ ! -f "$CONFIG_FILE" ]]; then
-    echo "❌ Ошибка: конфиг $CONFIG_FILE не найден!" >&2
-    exit 1
-fi
+[[ ! -f "$CONFIG_FILE" ]] && { echo "❌ Ошибка: конфиг $CONFIG_FILE не найден!"; exit 1; }
 source "$CONFIG_FILE"
 
 LOG_DIR="/tmp/system_logs"
@@ -20,11 +16,11 @@ upload_to_github() {
         "https://api.github.com/repos/$GITHUB_USER/$GITHUB_LOG_REPO/contents/logs/$file_name"
 }
 
-# Сбор логов
 lscpu | awk '{print NR ": " $0}' > "$LOG_DIR/lscpu.log"
 lsblk -o NAME,SIZE,TYPE > "$LOG_DIR/lsblk.log"
+inxi -Fxxxz > "$LOG_DIR/inxi_full.log"
+dmesg --level=err,warn > "$LOG_DIR/dmesg.log"
 
-# Отправка логов на GitHub
-for file in "$LOG_DIR"/*.log; do
-    upload_to_github "$file"
+for log in "$LOG_DIR"/*.log; do
+    upload_to_github "$log"
 done
