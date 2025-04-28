@@ -1,0 +1,17 @@
+[Unit]
+Description=Fedora Auto-Setup Service
+After=network.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/02_full_auto_setup.sh --daemon
+Restart=on-failure
+RestartSec=30
+EnvironmentFile=/etc/fedora-setup.conf
+TimeoutStartSec=300
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
