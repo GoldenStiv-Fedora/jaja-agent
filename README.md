@@ -27,7 +27,7 @@
 
 3. **Запустите установку одной командой:**
     ```bash
-    bash <(curl -s https://raw.githubusercontent.com/GoldenStiv-Fedora/fedora-setup/main/install.sh)
+    bash <(curl -s https://raw.githubusercontent.com/"Свой репозиторий"/fedora-setup/main/install.sh)
     ```
 
 4. **Проверьте службу:**
