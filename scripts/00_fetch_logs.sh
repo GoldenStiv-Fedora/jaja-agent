@@ -1,12 +1,12 @@
 #!/bin/bash
-# 00_fetch_logs.sh — Сбор логов системы
+# 00_fetch_logs.sh — Сбор и отправка логов на GitHub
 
 CONFIG_FILE="/etc/fedora-setup.conf"
 if [[ ! -f "$CONFIG_FILE" ]]; then
     echo "❌ Ошибка: конфиг $CONFIG_FILE не найден!" >&2
     exit 1
 fi
-source "$CONFIG_FILE"  # Подключаем настройки
+source "$CONFIG_FILE"
 
 LOG_DIR="/tmp/system_logs"
 mkdir -p "$LOG_DIR"
