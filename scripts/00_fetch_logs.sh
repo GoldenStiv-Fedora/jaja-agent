@@ -1,26 +1,28 @@
 #!/bin/bash
+# jaja-agent/scripts/00_fetch_logs.sh
+# Сбор системной информации — CPU, диски, устройства, ошибки
 
-CONFIG_FILE="/etc/fedora-setup.conf"
-[[ ! -f "$CONFIG_FILE" ]] && { echo "❌ Ошибка: конфиг $CONFIG_FILE не найден!"; exit 1; }
+set -euo pipefail
+
+CONFIG_FILE="/etc/jaja.conf"
+[[ ! -f "$CONFIG_FILE" ]] && { echo "❌ Конфиг $CONFIG_FILE не найден!"; exit 1; }
 source "$CONFIG_FILE"
 
 LOG_DIR="/tmp/system_logs"
 mkdir -p "$LOG_DIR"
 
-upload_to_github() {
-    local file_name="log_$(date +"%Y%m%d_%H%M%S")_$(sha256sum "$1" | cut -c1-8).log"
-    curl -s -X PUT \
-        -H "Authorization: token $GITHUB_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d "{\"message\":\"[LOG] $file_name\", \"content\":\"$(base64 -w0 "$1")\"}" \
-        "https://api.github.com/repos/$GITHUB_USER/$GITHUB_LOG_REPO/contents/logs/$file_name"
-}
+echo "📝 Сбор системной информации..."
 
-lscpu | awk '{print NR ": " $0}' > "$LOG_DIR/lscpu.log"
-lsblk -o NAME,SIZE,TYPE > "$LOG_DIR/lsblk.log"
-inxi -Fxxxz > "$LOG_DIR/inxi_full.log"
-dmesg --level=err,warn > "$LOG_DIR/dmesg.log"
+# CPU
+lscpu > "$LOG_DIR/lscpu.log" || echo "⚠️ Ошибка lscpu"
+# Диски
+lsblk -o NAME,SIZE,FSTYPE,TYPE,MOUNTPOINT,UUID > "$LOG_DIR/lsblk.log" || echo "⚠️ Ошибка lsblk"
+# Общая системная информация
+inxi -Fxxxz > "$LOG_DIR/inxi_full.log" || echo "⚠️ inxi не установлен или не доступен"
+# Журнал ядра
+dmesg --level=err,warn > "$LOG_DIR/dmesg.log" || echo "⚠️ Ошибка dmesg"
 
-for log in "$LOG_DIR"/*.log; do
-    upload_to_github "$log"
-done
+echo "✅ Логи собраны в: $LOG_DIR"
+
+[[ "$NOTIFY_ENABLED" == "yes" ]] && command -v notify-send &>/dev/null && \
+    notify-send "JAJA" "Системные логи собраны"
