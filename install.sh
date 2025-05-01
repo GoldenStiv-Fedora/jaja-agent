@@ -1,11 +1,20 @@
 #!/bin/bash
 
 # JAJA — Интеллектуальный агент сопровождения Fedora
-# Установка и первичная инициализация
+# Установка и инициализация
+
+# 🧪 Минимальная зависимость — curl
+if ! command -v curl &>/dev/null; then
+    echo "[ИНФО] curl не найден. Устанавливаю curl..."
+    (command -v dnf5 &>/dev/null && sudo dnf5 install -y curl) || sudo dnf install -y curl || {
+        echo "[ОШИБКА] Не удалось установить curl. Установите вручную и повторите установку."
+        exit 1
+    }
+fi
 
 set -euo pipefail
 
-# Цвета вывода
+# Цвета
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 
 error()   { echo -e "${RED}[ОШИБКА]${NC} $1" >&2; exit 1; }
@@ -17,7 +26,7 @@ check_root() {
 }
 
 install_deps() {
-    local deps=("curl" "gpg" "jq" "libnotify" "systemd" "dnf" "dnf5" "inxi")
+    local deps=("gpg" "jq" "libnotify" "systemd" "dnf" "dnf5" "inxi")
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &>/dev/null; then
             warning "Установка зависимости: $dep"
@@ -78,9 +87,9 @@ main() {
 
     echo
     success "✅ Установка JAJA завершена!"
-    echo "Проверить статус службы:"
+    echo "Проверь статус службы:"
     echo "  systemctl status fedora-auto-setup.service"
-    echo "Проверить таймер автоочистки логов:"
+    echo "Проверь таймер логов:"
     echo "  systemctl list-timers | grep auto-clean-logs"
 }
 
