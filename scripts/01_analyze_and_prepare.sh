@@ -1,25 +1,30 @@
 #!/bin/bash
 # jaja-agent/scripts/01_analyze_and_prepare.sh
-# Анализ собранных логов и подготовка конфигурации системы
+# Анализ аппаратной информации и подготовка параметров
 
 set -euo pipefail
 
+CONFIG_FILE="/etc/jaja.conf"
 LOG_DIR="/tmp/system_logs"
-OUT_CONF="/etc/jaja.env"
+OUTPUT_ENV="/etc/jaja.env"
 
-[[ -d "$LOG_DIR" ]] || { echo "❌ Логи не найдены в $LOG_DIR"; exit 1; }
+[[ -f "$CONFIG_FILE" ]] || { echo "❌ Конфиг $CONFIG_FILE не найден!"; exit 1; }
+[[ -d "$LOG_DIR" ]]     || { echo "❌ Логи не найдены в $LOG_DIR"; exit 1; }
 
-echo "🔍 Извлекаю информацию о системе..."
+source "$CONFIG_FILE"
 
-# Извлечение vendor_id из lscpu
+echo "🔍 Анализируем систему..."
+
+# Извлечение vendor_id из лога lscpu
 CPU_VENDOR=$(grep -i "vendor_id" "$LOG_DIR/lscpu.log" | head -n1 | sed 's/.*: //')
 [[ -z "$CPU_VENDOR" ]] && { echo "❌ Не удалось определить вендора CPU"; exit 1; }
 
-# Пример дополнительной обработки: можно расширять
-echo "cpu_vendor=$CPU_VENDOR" > "$OUT_CONF"
+# Сохраняем определённый параметр
+echo "cpu_vendor=$CPU_VENDOR" > "$OUTPUT_ENV"
 
-echo "✅ CPU-вендор определён: $CPU_VENDOR"
-echo "➡️ Конфигурация записана в $OUT_CONF"
+echo "✅ CPU-вендор: $CPU_VENDOR"
+echo "➡️ Сохранено в: $OUTPUT_ENV"
 
-[[ "$NOTIFY_ENABLED" == "yes" ]] && command -v notify-send &>/dev/null && \
-    notify-send "JAJA" "Определён CPU-вендор: $CPU_VENDOR"
+if [[ "${NOTIFY_ENABLED:-no}" == "yes" ]] && command -v notify-send &>/dev/null; then
+    notify-send "JAJA" "Вендор CPU: $CPU_VENDOR"
+fi
