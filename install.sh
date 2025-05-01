@@ -12,6 +12,15 @@ if ! command -v curl &>/dev/null; then
     }
 fi
 
+# Проверка и установка gpg (обязателен для расшифровки конфига)
+if ! command -v gpg &>/dev/null; then
+    echo "[ИНФО] gpg не найден. Устанавливаю gpg..."
+    (command -v dnf5 &>/dev/null && sudo dnf5 install -y gpg) || sudo dnf install -y gpg || {
+        echo "[ОШИБКА] Не удалось установить gpg. Установите вручную и повторите установку."
+        exit 1
+    }
+fi
+
 set -euo pipefail
 
 # Цвета
