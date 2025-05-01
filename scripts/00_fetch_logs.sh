@@ -5,7 +5,7 @@
 set -euo pipefail
 
 CONFIG_FILE="/etc/jaja.conf"
-[[ ! -f "$CONFIG_FILE" ]] && { echo "❌ Конфиг $CONFIG_FILE не найден!"; exit 1; }
+[[ -f "$CONFIG_FILE" ]] || { echo "❌ Конфиг $CONFIG_FILE не найден!"; exit 1; }
 source "$CONFIG_FILE"
 
 LOG_DIR="/tmp/system_logs"
@@ -24,5 +24,6 @@ dmesg --level=err,warn > "$LOG_DIR/dmesg.log" || echo "⚠️ Ошибка dmesg
 
 echo "✅ Логи собраны в: $LOG_DIR"
 
-[[ "$NOTIFY_ENABLED" == "yes" ]] && command -v notify-send &>/dev/null && \
+if [[ "${NOTIFY_ENABLED:-no}" == "yes" ]] && command -v notify-send &>/dev/null; then
     notify-send "JAJA" "Системные логи собраны"
+fi
