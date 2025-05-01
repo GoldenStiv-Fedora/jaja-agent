@@ -1,0 +1,9 @@
+[Unit]
+Description=JAJA Auto Update Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/jaja_auto_update.sh
+EnvironmentFile=/etc/jaja.conf
