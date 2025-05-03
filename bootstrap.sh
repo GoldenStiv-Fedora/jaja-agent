@@ -1,24 +1,38 @@
 #!/usr/bin/env bash
 
 # === СКРИПТ: bootstrap.sh ===
-# === ИНИЦИАЛИЗАЦИЯ СИСТЕМЫ И УСТАНОВКА ПРОЕКТА JAJA ИЗ GITHUB ===
+# === ИНИЦИАЛИЗАЦИЯ И УСТАНОВКА JAJA С GITHUB НА ЧИСТУЮ FEDORA-СИСТЕМУ ===
 
 set -euo pipefail
 
-echo "[BOOTSTRAP] Проверка поддержки Fedora..."
-if ! grep -q '^Fedora' /etc/fedora-release; then
-  echo "[ОШИБКА] Поддерживается только Fedora. Обнаружено: $(cat /etc/fedora-release)"
-  exit 1
+echo "[JAJA] Инициализация установки..."
+
+# === ШАГ 1: Создание целевой директории ===
+INSTALL_DIR="/home/jaja-agent"
+if [[ ! -d "$INSTALL_DIR" ]]; then
+  echo "[JAJA] Создаю директорию проекта: $INSTALL_DIR"
+  sudo mkdir -p "$INSTALL_DIR"
+  sudo chown "$(whoami)":"$(whoami)" "$INSTALL_DIR"
 fi
 
-echo "[BOOTSTRAP] Подготовка директорий..."
-sudo mkdir -p /home/jaja-agent
-sudo chown "$USER":"$USER" /home/jaja-agent
+# === ШАГ 2: Клонирование проекта с GitHub ===
+if [[ ! -d "$INSTALL_DIR/.git" ]]; then
+  echo "[JAJA] Клонирование репозитория..."
+  git clone --branch main "https://github.com/GoldenStiv-Fedora/jaja-agent.git" "$INSTALL_DIR"
+else
+  echo "[JAJA] Репозиторий уже клонирован. Обновление..."
+  git -C "$INSTALL_DIR" pull
+fi
 
-echo "[BOOTSTRAP] Клонирование проекта JAJA..."
-git clone https://github.com/GoldenStiv-Fedora/jaja-агент.git /home/jaja-agent
+# === ШАГ 3: Переход в директорию проекта ===
+cd "$INSTALL_DIR"
 
-echo "[BOOTSTRAP] Запуск установочного скрипта install.sh..."
-cd /home/jaja-agent
-chmod +x install.sh
-./install.sh
+# === ШАГ 4: Расшифровка конфигурационного файла ===
+echo "[JAJA] Расшифровка конфигурационного файла..."
+gpg --decrypt configs/jaja.conf.gpg > "$HOME/.jaja/configs/jaja.conf"
+
+# === ШАГ 5: Запуск install.sh ===
+echo "[JAJA] Запуск основного установочного скрипта..."
+bash ./install.sh
+
+exit 0
