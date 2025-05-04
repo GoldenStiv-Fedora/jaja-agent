@@ -1,7 +1,7 @@
 {
-  "uuid": "Jaja_n8n_command@GoldenStiv-Fedora",
+  "uuid": "jaja_n8n_command@GoldenStiv-Fedora",
   "name": "Jaja N8N Command",
-  "description": "GNOME Shell input extension to send user commands to n8n webhook",
-  "shell-version": ["44", "45"],
+  "description": "Интерактивное GNOME Shell расширение для ввода команд, отправляемых на N8N Webhook",
+  "shell-version": ["45", "44", "43"],
   "version": 1
 }
