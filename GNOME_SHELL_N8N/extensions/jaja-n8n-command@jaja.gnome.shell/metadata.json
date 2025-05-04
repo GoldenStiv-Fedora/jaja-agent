@@ -1,0 +1,9 @@
+// 📄 metadata.json - описание расширения
+{
+  "uuid": "jaja-n8n-command@jaja.gnome.shell",
+  "name": "JAJA N8N Command",
+  "description": "Позволяет отправлять команды из GNOME в n8n webhook",
+  "shell-version": ["45", "46", "47", "48"],
+  "version": 1,
+  "url": "https://github.com/GoldenStiv-Fedora/jaja-agent/GNOME_SHELL_N8N"
+}
