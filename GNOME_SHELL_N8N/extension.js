@@ -1,60 +1,54 @@
-const { St, Gio, GLib } = imports.gi;
-const Main = imports.ui.main;
-const PanelMenu = imports.ui.panelMenu;
-const PopupMenu = imports.ui.popupMenu;
-const Soup = imports.gi.Soup;
-const Lang = imports.lang;
+import { St, Clutter, Gio } from 'gi://St';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as ExtensionUtils from 'resource:///org/gnome/shell/extensions/extensionUtils.js';
 
-let JajaAgentExtension;
+export default class JajaN8nCommandExtension {
+  constructor() {
+    this._indicator = null;
+  }
 
-class JajaAgentButton extends PanelMenu.Button {
-    constructor() {
-        super(0.0, "Jaja N8N Command");
+  enable() {
+    this._indicator = new PanelMenu.Button(0.0, 'Jaja n8n Command');
 
-        this.box = new St.BoxLayout({ style_class: 'panel-status-menu-box' });
-        this.entry = new St.Entry({ name: 'JajaCommandEntry', hint_text: 'Введите команду для Jaja Agent', track_hover: true });
-        this.sendButton = new St.Button({ label: "▶", style_class: 'system-menu-action' });
+    const box = new St.BoxLayout({ style_class: 'panel-status-menu-box' });
+    this._indicator.add_child(box);
 
-        this.box.add_child(this.entry);
-        this.box.add_child(this.sendButton);
-        this.actor.add_child(this.box);
+    const entry = new St.Entry({
+      style_class: 'jaja-entry',
+      hint_text: 'Введите команду...',
+      track_hover: true,
+      can_focus: true
+    });
 
-        this.sendButton.connect('clicked', () => {
-            const text = this.entry.get_text().trim();
-            if (text.length > 0) {
-                this._sendCommandToWebhook(text);
-                this.entry.set_text('');
-            }
-        });
+    entry.clutter_text.connect('activate', () => {
+      const command = entry.get_text();
+      this._sendCommand(command);
+      entry.set_text('');
+    });
+
+    box.add_child(entry);
+    Main.panel.addToStatusArea('jaja-n8n-command', this._indicator);
+  }
+
+  disable() {
+    if (this._indicator) {
+      this._indicator.destroy();
+      this._indicator = null;
     }
+  }
 
-    _sendCommandToWebhook(command) {
-        let session = new Soup.Session();
-        let message = Soup.Message.new('POST', 'http://localhost:5678/webhook/jaja-command');
+  _sendCommand(command) {
+    const webhookUrl = 'https://n8n.example.com/webhook/jaja';
+    const session = new Soup.Session();
 
-        message.set_request('application/json', Soup.MemoryUse.COPY,
-            JSON.stringify({ command: command }));
+    const message = Soup.Message.new('POST', webhookUrl);
+    message.set_request('application/json', Soup.MemoryUse.COPY, JSON.stringify({ command }));
 
-        session.queue_message(message, (session, message) => {
-            if (message.status_code === 200) {
-                log("✅ Команда успешно отправлена в N8N: " + command);
-            } else {
-                log("❌ Ошибка при отправке команды: " + message.status_code);
-            }
-        });
-    }
-}
-
-function init() {}
-
-function enable() {
-    JajaAgentExtension = new JajaAgentButton();
-    Main.panel.addToStatusArea('JajaN8NCommand', JajaAgentExtension);
-}
-
-function disable() {
-    if (JajaAgentExtension) {
-        JajaAgentExtension.destroy();
-        JajaAgentExtension = null;
-    }
+    session.queue_message(message, (session, response) => {
+      if (response.status_code !== 200) {
+        log(`Ошибка отправки команды: ${response.status_code}`);
+      }
+    });
+  }
 }
