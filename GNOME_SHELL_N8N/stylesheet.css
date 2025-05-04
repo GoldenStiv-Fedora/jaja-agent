@@ -1,7 +1,9 @@
-/* =============== 🎨 3. stylesheet.css =============== */
+/*  Стилизация поля ввода команды JAJA */
+
 .jaja-entry {
-  padding: 4px;
+  padding: 6px;
   border-radius: 6px;
-  background-color: #2c2c2c;
-  color: white;
+  background-color: #1e1e2e;
+  color: #eeeeee;
+  width: 300px;
 }
