@@ -1,9 +1,7 @@
-/* === metadata.json === */
 {
-  "uuid": "jaja-agent-command-entry@yourgithubusername",
-  "name": "JAJA Agent Command Entry",
-  "description": "GNOME Shell extension to send commands to JAJA Agent via webhook.",
-  "version": 1,
-  "shell-version": ["3.38", "40", "41", "42", "43", "44", "45"],
-  "url": "https://github.com/yourgithubusername/jaja-agent-command-entry"
+  "uuid": "Jaja_n8n_command@GoldenStiv-Fedora",
+  "name": "Jaja N8N Command",
+  "description": "GNOME Shell input extension to send user commands to n8n webhook",
+  "shell-version": ["44", "45"],
+  "version": 1
 }
