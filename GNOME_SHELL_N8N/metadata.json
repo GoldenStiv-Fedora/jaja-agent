@@ -1,9 +1,11 @@
-
-/* =============== 🧷 1. metadata.json =============== */
+// =========================
+// 📄 metadata.json
+// =========================
 {
-  "uuid": "jaja-n8n-command@jaja-agent",
-  "name": "JAJA N8N Command",
-  "description": "GNOME Shell расширение для отправки команд в n8n webhook",
-  "shell-version": [ "45", "46", "47" ],
-  "version": 1
+  "uuid": "jaja-n8n-command@gnome-shell",
+  "name": "JAJA Agent Command",
+  "description": "Отправка команд из GNOME в n8n через Webhook",
+  "version": 1,
+  "shell-version": ["45", "46", "47", "48"],
+  "url": "https://github.com/GoldenStiv-Fedora/jaja-agent/GNOME_SHELL_N8N"
 }
