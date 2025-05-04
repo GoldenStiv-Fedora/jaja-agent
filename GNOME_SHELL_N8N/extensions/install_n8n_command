@@ -5,7 +5,7 @@ EXT_DIR="$HOME/.local/share/gnome-shell/extensions/jaja-n8n-command@jaja.gnome.s
 REPO="https://github.com/GoldenStiv-Fedora/jaja-agent"
 
 # Клонируем только папку с расширением n8n command
-mkdir -p "$HOME/.local/share/gnome-shell/extensions"
+mkdir -p "$HOME/.local/share/gnome-shell/extensions/jaja-n8n-command@jaja.gnome.shell"
 git clone --depth 1 "$REPO" temp_jaja_ext
 cp -r temp_jaja_ext/GNOME_SHELL_N8N/extensions/jaja-n8n-command@jaja.gnome.shell "$EXT_DIR"
 rm -rf temp_jaja_ext
