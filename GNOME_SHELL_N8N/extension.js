@@ -4,61 +4,66 @@
   Команда отправляется POST-запросом на локальный n8n webhook.
 */
 
-const { St, GLib, Soup } = imports.gi;
+// Основной файл расширения GNOME Shell
+const { St, GLib, Gio } = imports.gi;
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 const PopupMenu = imports.ui.popupMenu;
+const Lang = imports.lang;
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
 
-let panelButton;
+let jajaButton;
 
-class JAJACommandButton extends PanelMenu.Button {
-  constructor() {
-    super(0.0, 'JAJA N8N Command');
+class JajaAgentMenu extends PanelMenu.Button {
+  _init() {
+    super._init(0.0, 'Jaja N8N Command');
 
-    const icon = new St.Icon({
-      gicon: Gio.icon_new_for_string(`${Me.path}/icons/icon.png`),
-      style_class: 'system-status-icon',
+    // Иконка для панели
+    let iconPath = Me.path + '/icons/Jaja.png';
+    let icon = new St.Icon({
+      gicon: Gio.icon_new_for_string(iconPath),
+      style_class: 'system-status-icon'
     });
-
     this.add_child(icon);
 
-    const entry = new St.Entry({
+    // Поле ввода команды
+    this.entry = new St.Entry({
+      name: 'JajaEntry',
       hint_text: 'Введите команду для JAJA...',
       track_hover: true,
-      can_focus: true,
-      style_class: 'jaja-entry'
+      can_focus: true
     });
 
-    const menuItem = new PopupMenu.PopupBaseMenuItem({ activate: false });
-    menuItem.actor.add(entry);
-    this.menu.addMenuItem(menuItem);
+    let entryItem = new PopupMenu.PopupBaseMenuItem({ activate: false });
+    entryItem.actor.add_child(this.entry);
+    this.menu.addMenuItem(entryItem);
 
-    entry.clutter_text.connect('activate', () => {
-      const text = entry.get_text();
-      if (text.length > 0) {
-        this._sendCommandToWebhook(text);
-        entry.set_text('');
-      }
+    // Кнопка отправки команды
+    let sendItem = new PopupMenu.PopupMenuItem('Отправить команду');
+    sendItem.connect('activate', () => {
+      let command = this.entry.get_text();
+      this._sendToWebhook(command);
     });
+    this.menu.addMenuItem(sendItem);
   }
 
-  _sendCommandToWebhook(command) {
-    const session = new Soup.Session();
-    const message = Soup.Message.new('POST', 'http://localhost:5678/webhook/command-input');
-    const body = JSON.stringify({ command });
-    message.set_request('application/json', Soup.MemoryUse.COPY, body);
-    session.queue_message(message, () => {});
+  _sendToWebhook(command) {
+    // Отправка POST-запроса на локальный webhook n8n
+    GLib.spawn_command_line_async(`curl -X POST http://localhost:5678/webhook/command-input -H "Content-Type: application/json" -d '{"command": "${command}"}'`);
   }
 }
 
 function init() {}
 
 function enable() {
-  panelButton = new JAJACommandButton();
-  Main.panel.addToStatusArea('jaja-n8n-command', panelButton);
+  jajaButton = new JajaAgentMenu();
+  Main.panel.addToStatusArea('jaja-n8n-command', jajaButton);
 }
 
 function disable() {
-  panelButton.destroy();
-  panelButton = null;
+  if (jajaButton) {
+    jajaButton.destroy();
+    jajaButton = null;
+  }
 }
