@@ -1,8 +1,0 @@
-[Unit]
-Description=JAJA Auto Clean Logs Service
-After=local-fs.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/auto_clean_logs.sh
-EnvironmentFile=/etc/jaja.conf
