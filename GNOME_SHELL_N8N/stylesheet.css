@@ -1,9 +1,11 @@
 /*  Стилизация поля ввода команды JAJA */
 
-.jaja-entry {
-  padding: 6px;
+#JajaEntry {
+  padding: 4px;
+  font-size: 14px;
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.3);
   border-radius: 6px;
-  background-color: #1e1e2e;
-  color: #eeeeee;
-  width: 300px;
+  margin: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
