@@ -1,8 +1,13 @@
 {
-  "uuid": "jaja-n8n-command@gnome-shell",
-  "name": "JAJA Agent Command",
-  "description": "Отправка команд из GNOME в n8n через Webhook",
+  "uuid": "jaja-n8n-command@jaja.gnome",
+  "name": "JAJA N8N Command",
+  "description": "Поле ввода команд для отправки в n8n через webhook.",
   "version": 1,
-  "shell-version": ["45", "46", "47", "48"],
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48"
+  ],
   "url": "https://github.com/GoldenStiv-Fedora/jaja-agent/GNOME_SHELL_N8N"
 }
