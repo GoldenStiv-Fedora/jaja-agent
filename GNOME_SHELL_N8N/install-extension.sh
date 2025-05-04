@@ -1,34 +1,29 @@
+// =========================
+// 📄 УСТАНОВОЧНЫЙ СКРИПТ: install-extension.sh
+// =========================
 #!/bin/bash
 
-# Скрипт автоматической установки GNOME Shell расширения JAJA
+EXT_DIR="$HOME/.local/share/gnome-shell/extensions/jaja-n8n-command@gnome-shell"
+REPO="https://github.com/GoldenStiv-Fedora/jaja-agent.git"
 
-set -e
+mkdir -p "$HOME/.local/share/gnome-shell/extensions"
+rm -rf "$EXT_DIR"
+git clone "$REPO" "$HOME/.jaja-agent"
+cp -r "$HOME/.jaja-agent/GNOME_SHELL_N8N/jaja-n8n-command" "$EXT_DIR"
 
-EXTENSION_ID="jaja-n8n-command@jaja-agent"
-EXTENSION_DIR="$HOME/.local/share/gnome-shell/extensions/$EXTENSION_ID"
-REPO="https://github.com/GoldenStiv-Fedora/jaja-agent"
+# Перезапуск оболочки (для X11)
+echo "Установка завершена. Перезапускаем GNOME Shell..."
+echo "ALT+F2 → r → Enter для применения (если на X11)"
+gnome-extensions enable jaja-n8n-command@gnome-shell
 
-mkdir -p "$EXTENSION_DIR"
-cd "$EXTENSION_DIR"
+# Для Wayland просто перезайти в сессию
 
-# Клонируем только нужную папку
-git init
-git remote add origin "$REPO"
-git config core.sparseCheckout true
-echo "GNOME_SHELL_N8N/*" > .git/info/sparse-checkout
-git pull origin main
+exit 0
 
-# Копируем содержимое нужной папки в корень расширения
-mv GNOME_SHELL_N8N/* ./
-rm -rf GNOME_SHELL_N8N
-
-# Перезапускаем GNOME Shell (для Wayland)
-echo "Установлено в $EXTENSION_DIR"
-echo "Перезапускаем GNOME Shell..."
-
-if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
-  gnome-extensions enable "$EXTENSION_ID"
-  echo "Расширение активировано. Перезапустите GNOME Shell вручную или перезайдите."\else
-  gnome-shell-extension-tool -e "$EXTENSION_ID"
-  echo "Расширение активировано. Нажмите ALT+F2, введите 'r' и нажмите Enter."
-fi
+// =========================
+// ✅ ИТОГ
+// =========================
+// ➤ Расширение "JAJA N8N Command" позволяет отправлять команды напрямую из GNOME
+// ➤ Поддерживаются версии GNOME 45–48
+// ➤ Команды отправляются на локальный webhook n8n
+// ➤ Можно подключить NLP и построить полноценного агента JAJA
